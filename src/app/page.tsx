@@ -10,9 +10,9 @@ import ConversationView from '@/components/view/ConversationView';
 import { cn } from '@/lib/utils';
 import { useQchatStore } from '@/store/qchatStore';
 import { IconLayoutSidebarLeftCollapse, IconX } from '@tabler/icons-react';
-import { ArrowUpRightIcon } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
-import Image from 'next/image';
+// import { ArrowUpRightIcon } from 'lucide-react';
+import { AnimatePresence } from 'motion/react';
+// import Image from 'next/image';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { checkServerStatus } from '../../api/axios';
@@ -95,7 +95,7 @@ export default function Home() {
               {isSidebarOpen && <ChatHistoryList />}
             </AnimatePresence>
           </div>
-          <RedirectToGithub />
+          {/* <RedirectToGithub /> */}
         </SidebarBody>
       </Sidebar>
       <div
@@ -141,53 +141,53 @@ const CloseSidebarButton = ({
   );
 };
 
-const RedirectToGithub = () => {
-  const { isSidebarOpen } = useQchatStore();
+// const RedirectToGithub = () => {
+//   const { isSidebarOpen } = useQchatStore();
 
-  return (
-    <button
-      className={`flex h-10 w-full flex-nowrap items-center justify-between rounded-2xl bg-[#404040]/40 ${isSidebarOpen ? 'px-4' : 'pl-[10px]'} py-2 duration-200 ease-in-out hover:bg-[#404040]/80`}
-      onClick={() =>
-        window.open(
-          'https://github.com/SayantanmPaul?tab=repositories',
-          '_blank',
-        )
-      }
-    >
-      <span className="flex items-center gap-3">
-        <Image
-          src="/logo/github-mark-white.svg"
-          alt="GitHub"
-          width={20}
-          height={19}
-          draggable={false}
-          className="h-5 w-5"
-        />
-        <AnimatePresence>
-          {isSidebarOpen && (
-            <motion.p
-              initial={{ opacity: 1 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{
-                delay: 0,
-                duration: 0.2,
-                ease: 'anticipate',
-              }}
-              className="font-briColage text-sm font-medium whitespace-nowrap text-[#EFEFEF]"
-            >
-              Proudly Open Source
-            </motion.p>
-          )}
-        </AnimatePresence>
-      </span>
-      {isSidebarOpen && (
-        <ArrowUpRightIcon
-          size={20}
-          strokeWidth={2}
-          className="text-[#EFEFEF]"
-        />
-      )}
-    </button>
-  );
-};
+//   return (
+//     <button
+//       className={`flex h-10 w-full flex-nowrap items-center justify-between rounded-2xl bg-[#404040]/40 ${isSidebarOpen ? 'px-4' : 'pl-[10px]'} py-2 duration-200 ease-in-out hover:bg-[#404040]/80`}
+//       onClick={() =>
+//         window.open(
+//           'https://github.com/SayantanmPaul?tab=repositories',
+//           '_blank',
+//         )
+//       }
+//     >
+//       <span className="flex items-center gap-3">
+//         <Image
+//           src="/logo/github-mark-white.svg"
+//           alt="GitHub"
+//           width={20}
+//           height={19}
+//           draggable={false}
+//           className="h-5 w-5"
+//         />
+//         <AnimatePresence>
+//           {isSidebarOpen && (
+//             <motion.p
+//               initial={{ opacity: 1 }}
+//               animate={{ opacity: 1 }}
+//               exit={{ opacity: 0 }}
+//               transition={{
+//                 delay: 0,
+//                 duration: 0.2,
+//                 ease: 'anticipate',
+//               }}
+//               className="font-briColage text-sm font-medium whitespace-nowrap text-[#EFEFEF]"
+//             >
+//               Proudly Open Source
+//             </motion.p>
+//           )}
+//         </AnimatePresence>
+//       </span>
+//       {isSidebarOpen && (
+//         <ArrowUpRightIcon
+//           size={20}
+//           strokeWidth={2}
+//           className="text-[#EFEFEF]"
+//         />
+//       )}
+//     </button>
+//   );
+// };
