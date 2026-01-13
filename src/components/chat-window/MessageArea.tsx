@@ -1,3 +1,5 @@
+'use client';
+
 import { Message, SearchInfo } from '@/types/message-type';
 import { ResponseLoader } from '../ui/loader';
 import { TextShimmer } from '../motion-primitives/text-shimmer';
@@ -14,7 +16,17 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { MarkdownRenderer } from '../ui/markdown-renderer';
-import { C1Component, ThemeProvider } from '@thesysai/genui-sdk';
+import dynamic from 'next/dynamic';
+
+const C1Component = dynamic(
+  () => import('@thesysai/genui-sdk').then(mod => mod.C1Component),
+  { ssr: false },
+);
+
+const ThemeProvider = dynamic(
+  () => import('@thesysai/genui-sdk').then(mod => mod.ThemeProvider),
+  { ssr: false },
+);
 
 const SearchStages = ({ searchInfo }: { searchInfo: SearchInfo | null }) => {
   if (!searchInfo || !searchInfo.stages || searchInfo.stages.length === 0)

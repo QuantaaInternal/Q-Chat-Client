@@ -1,5 +1,8 @@
 'use client';
 
+export const dynamic = "force-dynamic";
+
+
 import { Branding } from '@/components/branding/branding';
 import ChatHistoryList from '@/components/chat-window/ChatHistoryList';
 import NewChatButton from '@/components/chat-window/NewChatButton';
