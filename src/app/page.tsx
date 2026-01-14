@@ -18,7 +18,7 @@ import { AnimatePresence } from 'motion/react';
 // import Image from 'next/image';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import { checkServerStatus } from '../../api/axios';
+import { checkServerStatus, getApiBaseUrl } from '../../api/axios';
 import SignInDrawer from '@/components/chat-window/SignInDrawer';
 
 export default function Home() {
@@ -33,7 +33,7 @@ export default function Home() {
 
   // checks the server status by pinging the health endpoint.
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+    const apiUrl = getApiBaseUrl();
 
     const checkStatus = () => {
       checkServerStatus({ apiUrl }).then(isHealthy => {

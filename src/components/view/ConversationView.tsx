@@ -3,6 +3,7 @@
 import { useQchatStore } from '@/store/qchatStore';
 import { useEffect, useState } from 'react';
 import { useChatStream } from '@/hooks/useChatStream';
+import { getApiBaseUrl } from '../../../api/axios';
 import { Message } from '@/types/message-type';
 import MessageArea from '../chat-window/MessageArea';
 import GreetingMessage from '../chat-window/GreetingMessage';
@@ -21,7 +22,7 @@ const ConversationView = () => {
   const autoScrollRef = useChatScroll(messages);
 
   const { startStream } = useChatStream({
-    baseURL: `${process.env.NEXT_PUBLIC_BASE_URL}/chat-stream` || '',
+    baseURL: `${getApiBaseUrl()}/chat-stream`,
   });
 
   const {

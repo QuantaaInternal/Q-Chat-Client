@@ -28,6 +28,12 @@ const ThemeProvider = dynamic(
   { ssr: false },
 );
 
+const ThemeSafeContainer = ({
+  children,
+}: React.PropsWithChildren<{ disableThemeProvider?: boolean }>) => {
+  return <div className="mb-3 w-full">{children}</div>;
+};
+
 const SearchStages = ({ searchInfo }: { searchInfo: SearchInfo | null }) => {
   if (!searchInfo || !searchInfo.stages || searchInfo.stages.length === 0)
     return null;
@@ -179,7 +185,7 @@ const MessageArea = ({ messages }: { messages: Message[] }) => {
                 }}
                 mode="dark"
               >
-                <div className="mb-3 w-full">
+                <ThemeSafeContainer>
                   {message.ui.loading ? (
                     <div className="flex items-center py-2 text-[#D1D6DC]">
                       <PaintbrushIcon
@@ -199,7 +205,7 @@ const MessageArea = ({ messages }: { messages: Message[] }) => {
                       />
                     )
                   )}
-                </div>
+                </ThemeSafeContainer>
               </ThemeProvider>
             )}
 

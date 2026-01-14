@@ -1,11 +1,16 @@
 import axios, { AxiosInstance } from 'axios';
 
-const isDevMode = false;
+const isDevMode = process.env.NODE_ENV !== 'production';
+
+export const getApiBaseUrl = () => {
+  const devUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  const prodUrl = process.env.NEXT_PUBLIC_PRODUCTION_URL;
+
+  return (isDevMode ? devUrl : prodUrl) || devUrl || '';
+};
 
 const axiosInstance: AxiosInstance = axios.create({
-  baseURL: isDevMode
-    ? process.env.NEXT_PUBLIC_BASE_URL
-    : process.env.NEXT_PUBLIC_PRODUCTION_URL,
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
