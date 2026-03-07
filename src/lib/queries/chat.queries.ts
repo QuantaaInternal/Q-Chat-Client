@@ -15,13 +15,15 @@ export const useGetModelNames = () => {
   });
 };
 
-export const useGetCurrentModel = () => {
+export const useGetCurrentModel = ({ enabled = true }: { enabled?: boolean } = {}) => {
   return useQuery({
     queryKey: ['currentModel'],
     queryFn: async () => {
       const data = await getCurrentModel();
       return data;
     },
+    enabled,
+    retry: false,
   });
 };
 

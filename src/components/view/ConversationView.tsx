@@ -1,43 +1,121 @@
 'use client';
-// import useChatScroll from '@/hooks/useChatScroll';
-import { useQchatStore } from '@/store/qchatStore';
-import { useEffect, useState } from 'react';
-import { useChatStream } from '@/hooks/useChatStream';
-import { getApiBaseUrl } from '../../../api/axios';
+
+import { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { toast } from 'sonner';
 import { Message } from '@/types/message-type';
+import useChatScroll from '@/hooks/useChatScroll';
+import { useChatStream } from '@/hooks/useChatStream';
+import { buildApiUrl } from '@/lib/api';
+import {
+  useAddConversationMessages,
+  useCreateConversation,
+  useGetConversationMessages,
+} from '@/lib/queries/history.queries';
+import { useQchatStore } from '@/store/qchatStore';
 import MessageArea from '../chat-window/MessageArea';
 import GreetingMessage from '../chat-window/GreetingMessage';
 import ExampleQueries from '../chat-window/ExampleQueries';
-import useChatScroll from '@/hooks/useChatScroll';
-import { AnimatePresence, motion } from 'motion/react';
 import NavbarItemsContainer from '../chat-window/NavbarItemsContainer';
 import AnimatedFileTextarea from '../chat-window/AnimatedFileTextarea';
 
+const mapHistoryToUiMessages = (history: {
+  data: Array<{
+    role: 'system' | 'user' | 'assistant' | 'tool';
+    content: string;
+  }>;
+}) => {
+  return history.data
+    .filter(message => message.role === 'user' || message.role === 'assistant')
+    .map((message, index) => ({
+      id: index + 1,
+      content: message.content,
+      isUser: message.role === 'user',
+      type: 'message',
+      isLoading: false,
+    }));
+};
+
 const ConversationView = () => {
   const [messages, setMessages] = useState<Message[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentMessage, setCurrentMessage] = useState('');
-  const [checkpointId, setCheckpointId] = useState<string | null>(null);
   const [prefill, setPrefill] = useState<string>('');
   const autoScrollRef = useChatScroll(messages);
 
-  const { startStream } = useChatStream({
-    baseURL: `${getApiBaseUrl()}/chat-stream`,
-  });
-
   const {
     selectedModel,
-    // setConversationList,
-    setClearStore,
     isLoading,
+    isUserAuthenticated,
+    activeConversationId,
+    setActiveConversationId,
+    chatResetKey,
+    setIsSignInDrawerOpen,
   } = useQchatStore();
 
-  useEffect(() => {
-    setClearStore();
-  }, [setClearStore]);
+  const { startStream } = useChatStream({
+    baseURL: buildApiUrl('/chat-stream'),
+  });
+  const { mutateAsync: createConversationAsync } = useCreateConversation();
+  const { mutateAsync: addMessagesAsync } = useAddConversationMessages();
 
-  const onSubmit = (value: string) => {
-    if (!value.trim()) return;
+  const { data: conversationMessages } = useGetConversationMessages({
+    conversationId: activeConversationId,
+    enabled: isUserAuthenticated,
+  });
+
+  useEffect(() => {
+    if (!activeConversationId) {
+      setMessages([]);
+      return;
+    }
+
+    if (!conversationMessages) return;
+    setMessages(mapHistoryToUiMessages(conversationMessages));
+  }, [activeConversationId, conversationMessages]);
+
+  useEffect(() => {
+    setMessages([]);
+    setCurrentMessage('');
+    setPrefill('');
+  }, [chatResetKey]);
+
+  const ensureConversationId = async (firstUserMessage: string) => {
+    if (activeConversationId) return activeConversationId;
+
+    const createdConversation = await createConversationAsync({
+      title: firstUserMessage.slice(0, 80),
+    });
+    setActiveConversationId(createdConversation.id);
+    return createdConversation.id;
+  };
+
+  const onSubmit = async (value: string) => {
+    const trimmedValue = value.trim();
+    if (!trimmedValue) return;
+
+    if (!isUserAuthenticated) {
+      setIsSignInDrawerOpen(true);
+      toast.error('Please log in to save and continue your chats.');
+      return;
+    }
+
+    const modelName = selectedModel?.name || '';
+    if (!modelName) {
+      toast.error('Please select a model before sending your message.');
+      return;
+    }
+
+    let conversationIdForStream: string;
+    try {
+      conversationIdForStream = await ensureConversationId(trimmedValue);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to create a chat conversation.',
+      );
+      return;
+    }
 
     const newMessageId =
       messages.length > 0 ? Math.max(...messages.map(msg => msg.id)) + 1 : 1;
@@ -46,7 +124,7 @@ const ConversationView = () => {
       ...prev,
       {
         id: newMessageId,
-        content: value,
+        content: trimmedValue,
         isUser: true,
         type: 'message',
         isLoading: false,
@@ -67,23 +145,81 @@ const ConversationView = () => {
       },
     ]);
 
-    startStream({
-      userInput: value,
-      checkpointId,
+    const resolvedConversationIdRef = { current: conversationIdForStream };
+    const persistMessages = async ({
+      userMessage,
+      assistantMessage,
+    }: {
+      userMessage: string;
+      assistantMessage?: string;
+    }) => {
+      const targetConversationId = resolvedConversationIdRef.current;
+      if (!targetConversationId) return;
+
+      const payloadMessages: Array<{
+        role: 'user' | 'assistant';
+        content: string;
+        metadata: Record<string, unknown>;
+      }> = [
+        {
+          role: 'user',
+          content: userMessage,
+          metadata: {},
+        },
+      ];
+
+      if (assistantMessage && assistantMessage.trim()) {
+        payloadMessages.push({
+          role: 'assistant',
+          content: assistantMessage,
+          metadata: {},
+        });
+      }
+
+      try {
+        await addMessagesAsync({
+          conversationId: targetConversationId,
+          messages: payloadMessages,
+        });
+      } catch (error) {
+        console.error('Failed to persist chat messages:', error);
+      }
+    };
+
+    void startStream({
+      userInput: trimmedValue,
+      checkpointId: conversationIdForStream,
       aiResponseId,
-      modelName: selectedModel?.name || '',
+      modelName,
       updateMessage: setMessages,
-      setCheckpointId,
+      setCheckpointId: latestCheckpointId => {
+        setActiveConversationId(latestCheckpointId);
+        resolvedConversationIdRef.current = latestCheckpointId;
+      },
+      onComplete: async ({ content }) => {
+        await persistMessages({
+          userMessage: trimmedValue,
+          assistantMessage: content,
+        });
+      },
+      onError: async () => {
+        await persistMessages({
+          userMessage: trimmedValue,
+        });
+      },
     });
   };
 
-  const placeholders = [
-    'What is a mutual fund?',
-    'How do I start investing with ₹500?',
-    'What’s the difference between SIP and lumpsum?',
-    'Is it better to invest in FD or mutual funds?',
-    'Are mutual funds safe?',
-  ];
+  const placeholders = useMemo(
+    () => [
+      'What is a mutual fund?',
+      'How do I start investing with ₹500?',
+      'What’s the difference between SIP and lumpsum?',
+      'Is it better to invest in FD or mutual funds?',
+      'Are mutual funds safe?',
+    ],
+    [],
+  );
 
   return (
     <div className="relative flex h-screen max-h-[calc(100vh-0px)] flex-1 bg-[#0D0D0D] px-4 md:max-h-full lg:max-h-full lg:px-0">
@@ -92,13 +228,17 @@ const ConversationView = () => {
         <motion.div
           transition={{ duration: 0.5 }}
           animate={{ justifyContent: messages.length > 0 ? 'end' : 'center' }}
-          className={`relative flex h-full w-full flex-1 flex-col items-center gap-4 overflow-y-auto ${messages.length > 0 ? 'justify-end' : 'justify-center'} `}
+          className={`relative flex h-full w-full flex-1 flex-col items-center gap-4 overflow-y-auto ${
+            messages.length > 0 ? 'justify-end' : 'justify-center'
+          } `}
         >
           <div className="absolute top-0 z-10 w-full bg-[#0D0D0D] lg:bg-transparent">
             <NavbarItemsContainer />
           </div>
           <div
-            className={`relative flex w-full flex-col items-center lg:px-1 ${messages.length > 0 ? 'h-full gap-0 pb-4' : 'h-auto gap-5 pb-0 lg:gap-12'}`}
+            className={`relative flex w-full flex-col items-center lg:px-1 ${
+              messages.length > 0 ? 'h-full gap-0 pb-4' : 'h-auto gap-5 pb-0 lg:gap-12'
+            }`}
           >
             <div
               className="scrolling-touch w-full flex-1 overflow-y-auto pt-8"
@@ -127,7 +267,9 @@ const ConversationView = () => {
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                   setCurrentMessage(e.target.value)
                 }
-                onSubmit={onSubmit}
+                onSubmit={value => {
+                  void onSubmit(value);
+                }}
                 isLoading={isLoading}
                 prefill={prefill}
               />

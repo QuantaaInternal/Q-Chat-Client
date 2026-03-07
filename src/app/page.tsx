@@ -44,10 +44,10 @@ export default function Home() {
                 Please check your connection or try again shortly. Reach us to
                 report the issue{' '}
                 <a
-                  href="mailto:iam.paulsayantan06@gmail.com"
+                  href="mailto:tquantaa@gmail.com"
                   className="underline"
                 >
-                  iam.paulsayantan06@gmail.com
+                 tquantaa@gmail.com
                 </a>
               </p>
             ),

@@ -6,6 +6,7 @@ import './globals.css';
 import QueryProvider from '@/lib/QueryProvider';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster } from '@/components/ui/sonner';
+import AuthSessionSync from '@/components/auth/AuthSessionSync';
 import '@crayonai/react-ui/styles/index.css';
 
 export const metadata: Metadata = {
@@ -48,7 +49,7 @@ export const metadata: Metadata = {
       'https://ik.imagekit.io/hmeujbosa/QBanner.png?updatedAt=1754347327241',
     ],
     card: 'summary_large_image',
-    creator: '@sayantanpaul',
+    creator: '@teamquantaa',
     site: '@teamquantaa',
   },
   appleWebApp: {
@@ -61,7 +62,7 @@ export const metadata: Metadata = {
   category: 'technology',
   authors: [
     { name: 'Team Quantaa', url: 'https://www.quantaa.club' },
-    { name: 'Sayantan Paul', url: 'https://www.sayantanpaul.com' },
+    { name: 'Tejas Joshi', url: '' },
   ],
   creator: 'Team Quantaa',
   verification: {
@@ -86,6 +87,7 @@ export default function RootLayout({
             `dark antialiased ${fontBriColage.variable} ${fontDepartureMono.variable} ${fontJost.variable}`,
           )}
         >
+          <AuthSessionSync />
           {children}
           <Toaster />
           <ReactQueryDevtools initialIsOpen={false} />

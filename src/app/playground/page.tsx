@@ -19,8 +19,10 @@ const Page = () => {
     flag: 'https://kapowaz.github.io/circle-flags/flags/in.svg',
   };
 
-  const { data: modelList } = useGetCurrentModel();
-  const { selectedModel, setSelectedModel } = useQchatStore();
+  const { selectedModel, setSelectedModel, isUserAuthenticated } = useQchatStore();
+  const { data: modelList } = useGetCurrentModel({
+    enabled: isUserAuthenticated,
+  });
 
   const [activeLanguage, setActiveLanguage] = useState(defaultLanguage);
 
