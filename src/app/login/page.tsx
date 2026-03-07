@@ -2,11 +2,11 @@
 
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { continueWithGoogle } from '@/lib/supabase/auth';
 
-const LoginPage = () => {
+const LoginPageContent = () => {
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(searchParams.get('error'));
@@ -60,5 +60,12 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+const LoginPage = () => {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
+  );
+};
 
+export default LoginPage;
