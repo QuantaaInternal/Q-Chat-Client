@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
 import { Message } from '@/types/message-type';
 import useChatScroll from '@/hooks/useChatScroll';
 import { useChatStream } from '@/hooks/useChatStream';
-import { buildApiUrl } from '@/lib/api';
+import { ApiError, buildApiUrl } from '@/lib/api';
+import { syncAuth } from '../../../api/apiClient';
 import {
   useAddConversationMessages,
   useCreateConversation,
@@ -40,6 +41,7 @@ const ConversationView = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [prefill, setPrefill] = useState<string>('');
+  const lastAuthSyncAtRef = useRef<number>(0);
   const autoScrollRef = useChatScroll(messages);
 
   const {
@@ -89,6 +91,17 @@ const ConversationView = () => {
     return createdConversation.id;
   };
 
+  const ensureBackendAuthSynced = async () => {
+    const syncCooldownMs = 10_000;
+    const now = Date.now();
+    if (now - lastAuthSyncAtRef.current < syncCooldownMs) {
+      return;
+    }
+
+    await syncAuth();
+    lastAuthSyncAtRef.current = now;
+  };
+
   const onSubmit = async (value: string) => {
     const trimmedValue = value.trim();
     if (!trimmedValue) return;
@@ -96,6 +109,20 @@ const ConversationView = () => {
     if (!isUserAuthenticated) {
       setIsSignInDrawerOpen(true);
       toast.error('Please log in to save and continue your chats.');
+      return;
+    }
+
+    try {
+      await ensureBackendAuthSynced();
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        setIsSignInDrawerOpen(true);
+      }
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Authentication failed. Please log in again.',
+      );
       return;
     }
 

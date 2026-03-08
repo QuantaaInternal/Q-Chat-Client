@@ -43,6 +43,51 @@ const parseSseDataBlocks = (
   return { events, remaining };
 };
 
+const parseStreamError = (rawError: string): { message: string; code?: number } => {
+  const trimmed = rawError.trim();
+  if (!trimmed) {
+    return { message: '' };
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as {
+      error?: { message?: unknown; code?: unknown };
+      message?: unknown;
+      code?: unknown;
+    };
+
+    const parsedMessage =
+      (typeof parsed.error?.message === 'string' && parsed.error.message) ||
+      (typeof parsed.message === 'string' && parsed.message) ||
+      trimmed;
+
+    const rawCode = parsed.error?.code ?? parsed.code;
+    const parsedCode =
+      typeof rawCode === 'number'
+        ? rawCode
+        : typeof rawCode === 'string'
+          ? Number(rawCode)
+          : undefined;
+
+    return {
+      message: parsedMessage,
+      code: Number.isFinite(parsedCode) ? parsedCode : undefined,
+    };
+  } catch {
+    return { message: trimmed };
+  }
+};
+
+const isAuthError = (message: string, code?: number) => {
+  if (code === 401 || code === 403) {
+    return true;
+  }
+
+  return /user not found|unauthorized|forbidden|invalid token|not authenticated/i.test(
+    message,
+  );
+};
+
 export const useChatStream = ({ baseURL }: { baseURL: string }) => {
   const [streaming, setStreaming] = useState(false);
 
@@ -226,7 +271,8 @@ export const useChatStream = ({ baseURL }: { baseURL: string }) => {
 
           else if (data.type === 'error') {
             const raw = String(data.message || '');
-            const { limit, requested } = parseTokenPerMin(raw);
+            const { message: parsedMessage, code } = parseStreamError(raw);
+            const { limit, requested } = parseTokenPerMin(parsedMessage);
 
             if (limit || requested) {
               toast.error('Rate limit exceeded', {
@@ -240,25 +286,54 @@ export const useChatStream = ({ baseURL }: { baseURL: string }) => {
                 duration: 10000,
                 richColors: true,
               });
-            } else {
-              toast.error('Rate limit exceeded', {
-                description: `${raw} Please try again with a smaller query or choose another model.`,
+              updateMessage(prev =>
+                prev.map(msg =>
+                  msg.id === aiResponseId
+                    ? {
+                        ...msg,
+                        content:
+                          'Rate limit exceeded, please change the model or use a smaller query.',
+                        error: { raw: parsedMessage, code },
+                        isLoading: false,
+                      }
+                    : msg,
+                ),
+              );
+            } else if (isAuthError(parsedMessage, code)) {
+              toast.error('Authentication failed', {
+                description:
+                  'Your session is not synced with the server. Please sign out and sign in again.',
               });
+              updateMessage(prev =>
+                prev.map(msg =>
+                  msg.id === aiResponseId
+                    ? {
+                        ...msg,
+                        content:
+                          'Authentication error: please sign out and sign in again, then retry.',
+                        error: { raw: parsedMessage, code },
+                        isLoading: false,
+                      }
+                    : msg,
+                ),
+              );
+            } else {
+              toast.error('Request failed', {
+                description: parsedMessage || 'Sorry, your request failed.',
+              });
+              updateMessage(prev =>
+                prev.map(msg =>
+                  msg.id === aiResponseId
+                    ? {
+                        ...msg,
+                        content: parsedMessage || 'Sorry, there was an error processing your request.',
+                        error: { raw: parsedMessage, code },
+                        isLoading: false,
+                      }
+                    : msg,
+                ),
+              );
             }
-
-            updateMessage(prev =>
-              prev.map(msg =>
-                msg.id === aiResponseId
-                  ? {
-                      ...msg,
-                      content:
-                        'Rate limit exceeded, please change the model or use a smaller query.',
-                      error: { raw },
-                      isLoading: false,
-                    }
-                  : msg,
-              ),
-            );
           }
 
           else if (data.type === 'end') {
